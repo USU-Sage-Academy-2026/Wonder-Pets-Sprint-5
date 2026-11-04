@@ -1,0 +1,1 @@
+// Remembers who’s logged in and shares it with the whole app
