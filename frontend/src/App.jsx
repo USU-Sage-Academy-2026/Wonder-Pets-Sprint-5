@@ -15,7 +15,7 @@ export default function App() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, first_name: first, last_name: last }),
+        body: JSON.stringify({email: email, password: password, first_name: first, last_name: last }),
       });
       const data = await res.json();
       if (!res.ok) {
