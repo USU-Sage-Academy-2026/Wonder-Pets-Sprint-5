@@ -8,3 +8,4 @@ url = os.getenv("SUPABASE_URL")
 
 print(url is not None)
 #hey guys can you see this???
+#yessir
