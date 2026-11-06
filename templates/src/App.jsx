@@ -6,6 +6,7 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [first, setFirst] = useState('');
   const [last, setLast] = useState('');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
 
   async function handleSubmit(e) { // SUBMIT BUTTON API, CHECK HERE FOR BASICS
@@ -15,7 +16,7 @@ export default function App() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({email: email, password: password, first_name: first, last_name: last }),
+        body: JSON.stringify({email: email, password: password, first_name: first, last_name: last, phone: phone}),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -49,6 +50,10 @@ export default function App() {
       <label>
         Last Name
         <input type="last" value={last} onChange={(e) => setLast(e.target.value)} />
+      </label>
+      <label>
+        Phone
+        <input type="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
       </label>
       <button type="submit">Sign up</button>
       <p>{message}</p>
