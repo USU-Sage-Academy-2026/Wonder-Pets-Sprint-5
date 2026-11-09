@@ -1,1 +1,0 @@
-// Blocks pages unless you’re logged in
