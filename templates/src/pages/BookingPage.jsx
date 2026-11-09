@@ -17,7 +17,7 @@ export default function BookingPage() {
       {bookings.map((b) => (
         <div key={b.confirmation_code}>
           <h2>{b.event_name}</h2>
-          <p>{new Date(b.start_time).toLocaleString()} · party of {b.party_size} · {b.status}</p>
+          <p>{new Date(b.start_time).toLocaleString()} - party of {b.party_size} - {b.status}</p>
           <Link to={`/confirmation?code=${b.confirmation_code}`}>Show QR</Link>
         </div>
       ))}
