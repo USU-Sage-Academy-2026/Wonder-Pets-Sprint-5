@@ -1,46 +1,135 @@
-from flask import Flask, request, render_template,\
-    redirect, url_for, session
-from db import supabase
+import os
+from flask import Flask, jsonify, request, session
+from werkzeug.exceptions import BadRequest
+from supabase import create_client, Client
+
 app = Flask(__name__)
 
-@app.route("/")
-def home():
-    if "user" in session:
-        return redirect(url_for("dashboard"))
-    return redirect(url_for("login"))
+# 1. Environment-based configuration (Fail fast if secrets are missing)
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+if not app.secret_key:
+    raise RuntimeError("FATAL: FLASK_SECRET_KEY environment variable is not set.")
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-        response = supabase.auth.sign.up(\
-            {"email": email, "password": password})
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError("FATAL: Supabase credentials (URL/KEY) are missing from environment variables.")
 
-        if response.user:
-            return redirect(url_for("login"))
-        else:
-            return render_template("register.html", \
-                                   error="Registration faild. Try again.")
-    return render_template("register.html")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-@app.route("/login", methhods=["GET", "POST"])
+
+def error_response(message: str, status_code: int):
+    """Helper for consistent JSON error responses."""
+    return jsonify({"error": message}), status_code
+
+
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint for container orchestrators (e.g., Docker, AWS ECS)."""
+    return {"status": "healthy"}, 200
+
+
+@app.post("/api/auth/signup")
+def signup():
+    try:
+        data = request.get_json(silent=True) or {}
+    except BadRequest:
+        return error_response("Invalid JSON payload.", 400)
+
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    # Input validation
+    if "@" not in email or "." not in email:
+        return error_response("Enter a valid email address.", 400)
+    if len(password) < 8:
+        return error_response("Password must be at least 8 characters long.", 400)
+
+    try:
+        # Supabase signup call
+        response = supabase.auth.sign_up({"email": email, "password": password})
+        
+        if not response.user:
+            return error_response("Registration failed. Please try again.", 400)
+
+        return {
+            "message": "Registration successful. Please check your email to verify your account if required.",
+            "user_id": response.user.id,
+            "email": response.user.email
+        }, 201
+
+    except Exception as e:
+        # Catch Supabase API exceptions (e.g., user already exists)
+        error_msg = str(e)
+        if "already registered" in error_msg.lower():
+            return error_response("This email is already registered.", 409)
+        return error_response(f"Authentication service error: {error_msg}", 500)
+
+
+@app.post("/api/auth/login")
 def login():
-    if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+    try:
+        data = request.get_json(silent=True) or {}
+    except BadRequest:
+        return error_response("Invalid JSON payload.", 400)
 
-        response = supabase.auth.sign_in_with_password(\
-            {"email": email, "password": password})
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
 
-        if response.user:
-            session["user"] = response.user.email
-            return redirect(url_for("dashboard"))
-        else:
-            return render_template("login.html", \
-                                   error="Login failed. Wrong email or password")
-    return render_template("login.html")
+    if not email or not password:
+        return error_response("Email and password are required.", 400)
+
+    try:
+        # Supabase sign-in call
+        response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        
+        if not response.user:
+            return error_response("Invalid email or password.", 401)
+
+        # Secure session establishment
+        session.clear()
+        session["user_id"] = response.user.id
+        session["email"] = response.user.email
+        session["access_token"] = response.session.access_token if response.session else None
+
+        return {
+            "message": "Login successful",
+            "user_id": response.user.id,
+            "email": response.user.email
+        }, 200
+
+    except Exception as e:
+        return error_response("Invalid email or password.", 401)
+
+
+@app.post("/api/auth/logout")
+def logout():
+    session.clear()
+    return {"message": "Successfully logged out."}, 200
+
+
+@app.get("/api/me")
+def get_current_user():
+    if "user_id" not in session:
+        return {"logged_in": False}, 401
+
+    return {
+        "logged_in": True,
+        "user_id": session["user_id"],
+        "email": session["email"]
+    }, 200
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return error_response("Resource not found.", 404)
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return error_response("Internal server error.", 500)
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
