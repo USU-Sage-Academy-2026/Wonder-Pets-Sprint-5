@@ -97,10 +97,10 @@ def get_event_by_id(event_id):
 def signup_customer(email, password, first_name, last_name, phone_number=None):
 
     # Step 1: Create the user in Supabase Authentication
-    auth_user = supabase.auth.admin.create_user({
-        "email": email,
-        "password": password
-    })
+   auth_user = supabase.auth.admin.create_user({
+    "email": email,
+    "password": password
+})
 
     try:
         ###Step 2: Save customer information and Auth ID###
@@ -158,7 +158,9 @@ def login_customer(email, password):
 
     # Step 5: Return information for Brian's Flask route
     return {
-        "account_id": account["account_id"],
-        "first_name": account["first_name"],
-        "role": "customer"
+    "account_id": account["account_id"],
+    "first_name": account["first_name"],
+    "role": "customer",
+    "access_token": auth_response.session.access_token,
+    "refresh_token": auth_response.session.refresh_token
     }
