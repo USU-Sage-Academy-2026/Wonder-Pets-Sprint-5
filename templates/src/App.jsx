@@ -16,7 +16,7 @@ export default function App() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({email: email, password: password, first_name: first, last_name: last, phone: phone}),
+        body: JSON.stringify({email: email, password: password, first_name: first, last_name: last, phone_number: phone}),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -53,7 +53,7 @@ export default function App() {
       </label>
       <label>
         Phone
-        <input type="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       </label>
       <button type="submit">Sign up</button>
       <p>{message}</p>
