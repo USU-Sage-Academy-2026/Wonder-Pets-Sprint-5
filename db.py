@@ -117,10 +117,14 @@ def get_event_by_id(event_id):
 def signup_customer(email, password, first_name, last_name, phone_number=None):
 
     # Step 1: Create the user in Supabase Authentication
+    # create_user returns a UserResponse; the actual user is on .user
+    # email_confirm=True so the customer can log in right away
+    # (admin-created users get no confirmation email).
     auth_user = supabase.auth.admin.create_user({
         "email": email,
-        "password": password
-    })
+        "password": password,
+        "email_confirm": True
+    }).user
 
     try:
         ###Step 2: Save customer information and Auth ID###
